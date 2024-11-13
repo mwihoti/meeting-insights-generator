@@ -7,8 +7,8 @@ import { Textarea } from "./ui/textarea"
 import { useCompletion } from 'ai/react'
 import { AlertCircle, Images } from 'lucide-react'
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert"
-import { AudioRecorder } from './AudioRecorder'
-import { generatePDF } from '@/lib/pdf-utils'
+//import { AudioRecorder } from './AudioRecorder'
+//import { generatePDF } from '@/lib/pdf-utils'
 
 export default function MeetingInsightsGenerator() {
 
@@ -75,7 +75,7 @@ export default function MeetingInsightsGenerator() {
                         <AlertDescription>{error}</AlertDescription>
                     </Alert>
                 )}
-     <AudioRecorder onTranscriptUpdate={handleTranscriptUpdate} onRecordingComplete={handleRecordingComplete} />
+    
      <Textarea 
      placeholder="Transcript will appear here..."
      value={transcript}
