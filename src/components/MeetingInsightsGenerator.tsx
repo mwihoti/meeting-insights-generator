@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useCompletion } from 'ai/react'
-//import { AudioRecorder } from './AudioRecorder'
+import { AudioRecorder } from './AudioRecorder'
 //import { generatePDF } from '@/lib/pdf-utils'
 
 export default function MeetingInsightsGenerator() {
@@ -66,7 +66,7 @@ export default function MeetingInsightsGenerator() {
         }
 
         }
-    const handleGeneratePdF = async () => {
+    const handleGeneratePDF = async () => {
         try {
             await generatePDF(transcript, summary, images)
         } catch (error) {
@@ -104,7 +104,7 @@ export default function MeetingInsightsGenerator() {
                         <p className='ml-6'>{error}</p>
                     </div>
                 )}
-               {/* <AudioRecorder onTranscriptUpdate={handleTranscriptUpdate} onRecordingComplete={handleRecordingComplete}/> */}
+               <AudioRecorder onTranscriptUpdate={handleTranscriptUpdate} onRecordingComplete={handleRecordingComplete}/>
                 {audioBlob && (
                     <div className='flex items-center space-x-2'>
                         <audio ref={audioRef} controls className='w-full'/>
