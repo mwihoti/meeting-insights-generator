@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useCompletion } from 'ai/react'
 import { AudioRecorder } from './AudioRecorder'
-import { generatePDF } from '@/lib/pdf-utils'
+import { generatePDF, generateTranscriptPDF  } from '@/lib/pdf-utils'
 
 export default function MeetingInsightsGenerator() {
 
@@ -14,10 +14,9 @@ export default function MeetingInsightsGenerator() {
     const [error, setError] = useState<string | null>(null)
     const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
     const [isGeneratingInsights, setIsGeneratingInsights] = useState(false)
+    const [isGeneratinPDF, setIsGeneratingPDF] = useState(false)
+    const [isGenaratingTranscriptPDF, setIsGeneratingTranscriptPDF] = useState(false)
     const audioRef = useRef<HTMLAudioElement>(null)
-    const { complete } = useCompletion({
-        api: '/api/summarize',
-    })
 
     const handleTranscriptUpdate = (newTranscript: string) => {
         setTranscript((prev) => prev + newTranscript)
@@ -68,10 +67,28 @@ export default function MeetingInsightsGenerator() {
         }
     const handleGeneratePDF = async () => {
         try {
+            setError(null)
+            setIsGeneratingPDF(true)
             await generatePDF(transcript, summary, images)
         } catch (error) {
             console.error('Error generating PDF:', error)
             setError(`Error generating PDF: ${error instanceof Error ? error.message : String(error)}`)
+        } finally {
+            setIsGeneratingPDF(false)
+        }
+    }
+
+    const handleGenerateTranscriptPDF = async () => {
+
+        try {
+            setError(null)
+            setIsGeneratingTranscriptPDF(true)
+            await generateTranscriptPDF(transcript)
+        } catch (error) {
+            console.error('Error generating transcript PDF:', error)
+            setError(`Error generating transcript PDF: ${error instanceof Error ? error.message : String(error)}`)
+        } finally {
+            setIsGeneratingTranscriptPDF(false)
         }
     }
 
@@ -123,13 +140,20 @@ export default function MeetingInsightsGenerator() {
                 rows={10}
                 className='w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500'
                 />
+                <div className="flex space-x-2">
                 <button
                 onClick={generateInsights}
                 disabled={!transcript || isGeneratingInsights}
                 className='px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed'>
-                    {isGeneratingInsights ? 'Generaing Insights...' : ''}
+                    {isGeneratingInsights ? 'Generating Insights...' : 'Generate Insights'}
                 </button>
-
+                <button 
+                onClick={handleGenerateTranscriptPDF}
+                disabled={!transcript || isGenaratingTranscriptPDF}
+                className='px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed'>
+                    {isGenaratingTranscriptPDF ? 'Generating Transcript PDF...' : 'Download Transcript as a PDF'}
+                </button>
+                </div>
                 {summary && (
                     <div>
                         <h3 className='text-lg font-semibold'>Summary</h3>
