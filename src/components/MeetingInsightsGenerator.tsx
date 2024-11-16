@@ -4,7 +4,7 @@ import { useState, useRef } from 'react'
 import { AlertCircle } from 'lucide-react'
 import { useCompletion } from 'ai/react'
 import { AudioRecorder } from './AudioRecorder'
-//import { generatePDF } from '@/lib/pdf-utils'
+import { generatePDF } from '@/lib/pdf-utils'
 
 export default function MeetingInsightsGenerator() {
 
