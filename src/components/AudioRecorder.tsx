@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import * as tf from '@tensorflow/tfjs'
+import * as speechCommands from '@tensorflow-models/speech-commands'
+
 
 interface AudioRecorderProps {
   onTranscriptUpdate: (transcript: string) => void

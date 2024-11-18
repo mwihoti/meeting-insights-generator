@@ -1,41 +1,40 @@
 import { NextResponse } from 'next/server'
-import nlp from 'compromise'
 
-function summarize(text: string, numSentences: number = 3): string {
-  const doc = nlp(text)
-  const sentences = doc.sentences().out('array')
+export async function POST(req: Request) {
+  const { prompt } = await req.json()
 
-  // Calculate term frequency
-  const terms = doc.terms().out('frequency')
-  const termFrequency: { [key: string]: number } = {}
-  terms.forEach(term => {
-    termFrequency[term.normal] = term.count
-  })
-
-  // Score sentences based on term frequency
-  const sentenceScores = sentences.map(sentence => ({
-    sentence,
-    score: nlp(sentence).terms().out('array')
-      .reduce((score, term) => score + (termFrequency[term] || 0), 0)
-  }))
-
-  // Sort sentences by score and select top N
-  const topSentences = sentenceScores
-    .sort((a, b) => b.score - a.score)
-    .slice(0, numSentences)
-    .sort((a, b) => sentences.indexOf(a.sentence) - sentences.indexOf(b.sentence))
-
-  // Join the top sentences to form the summary
-  return topSentences.map(item => item.sentence.trim()).join(' ')
-}
-
-export async function POST(request: Request) {
   try {
-    const { prompt } = await request.json()
-    const summary = summarize(prompt)
-    return NextResponse.json({ summary })
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+      },
+      body: JSON.stringify({
+        model: 'gpt-3.5-turbo',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that summarizes meeting transcripts. Provide a concise summary with key points and action items.'
+          },
+          {
+            role: 'user',
+            content: prompt
+          }
+        ],
+      })
+    })
+
+    if (!response.ok) {
+      throw new Error('Failed to generate summary')
+    }
+
+    const data = await response.json()
+    const summary = data.choices[0].message.content
+
+    return new NextResponse(summary)
   } catch (error) {
     console.error('Error in summarize API:', error)
-    return NextResponse.json({ error: 'Failed to generate summary' }, { status: 500 })
+    return new NextResponse('Error generating summary', { status: 500 })
   }
 }
