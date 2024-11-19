@@ -1,51 +1,47 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { Mic, Square } from 'lucide-react'
 import * as tf from '@tensorflow/tfjs'
 import * as speechCommands from '@tensorflow-models/speech-commands'
 
-
 interface AudioRecorderProps {
   onTranscriptUpdate: (transcript: string) => void
-  onRecordingComplete: (audioBlob: Blob) => void
+  onRecordingComplete: (blob: Blob) => void
 }
 
 export function AudioRecorder({ onTranscriptUpdate, onRecordingComplete }: AudioRecorderProps) {
   const [isRecording, setIsRecording] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [editableTranscript, setEditableTranscript] = useState('')
+  const [transcript, setTranscript] = useState('')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const recognitionRef = useRef<SpeechRecognition | null>(null)
+  const speechRecognitionRef = useRef<SpeechRecognition | null>(null)
   const audioChunksRef = useRef<Blob[]>([])
-  const lastTranscriptRef = useRef<string>('')
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const animationFrameRef = useRef<number | null>(null)
+  const analyserRef = useRef<AnalyserNode | null>(null)
+  const audioContextRef = useRef<AudioContext | null>(null)
 
   useEffect(() => {
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop()
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
       }
-      if (mediaRecorderRef.current) {
-        mediaRecorderRef.current.stop()
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
       }
-      // Reset the transcript when component unmounts
-      setEditableTranscript('')
-      lastTranscriptRef.current = ''
     }
   }, [])
 
   const startRecording = async () => {
     try {
-      setError(null)
-      audioChunksRef.current = []
-      lastTranscriptRef.current = ''
-      setEditableTranscript('')
-
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
-      
       mediaRecorderRef.current = new MediaRecorder(stream)
-      
+      audioChunksRef.current = []
+
       mediaRecorderRef.current.ondataavailable = (event) => {
-        audioChunksRef.current.push(event.data)
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data)
+        }
       }
 
       mediaRecorderRef.current.onstop = () => {
@@ -53,97 +49,121 @@ export function AudioRecorder({ onTranscriptUpdate, onRecordingComplete }: Audio
         onRecordingComplete(audioBlob)
       }
 
-      mediaRecorderRef.current.start()
+      speechRecognitionRef.current = new (window.SpeechRecognition || window.webkitSpeechRecognition)()
+      speechRecognitionRef.current.continuous = true
+      speechRecognitionRef.current.interimResults = true
 
-      if ('webkitSpeechRecognition' in window) {
-        recognitionRef.current = new webkitSpeechRecognition()
-        recognitionRef.current.continuous = true
-        recognitionRef.current.interimResults = true
-
-        recognitionRef.current.onresult = (event) => {
-          let interimTranscript = ''
-          let finalTranscript = ''
-
-          for (let i = event.resultIndex; i < event.results.length; ++i) {
-            if (event.results[i].isFinal) {
-              finalTranscript += event.results[i][0].transcript
-            } else {
-              interimTranscript += event.results[i][0].transcript
-            }
-          }
-
-          const newTranscript = lastTranscriptRef.current + finalTranscript + interimTranscript
-          const processedTranscript = postProcessTranscript(newTranscript)
-          setEditableTranscript(processedTranscript)
-          onTranscriptUpdate(processedTranscript)
-          lastTranscriptRef.current = newTranscript
-        }
-
-        recognitionRef.current.onerror = (event) => {
-          console.error('Speech recognition error:', event.error)
-          setError(`Speech recognition error: ${event.error}`)
-        }
-
-        recognitionRef.current.start()
-      } else {
-        setError('Speech recognition is not supported in this browser.')
+      speechRecognitionRef.current.onresult = (event) => {
+        const currentTranscript = Array.from(event.results)
+          .map(result => result[0].transcript)
+          .join('')
+        setTranscript(currentTranscript)
+        onTranscriptUpdate(currentTranscript)
       }
 
+      mediaRecorderRef.current.start()
+      speechRecognitionRef.current.start()
       setIsRecording(true)
+
+      // Set up audio analysis
+      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      analyserRef.current = audioContextRef.current.createAnalyser()
+      const source = audioContextRef.current.createMediaStreamSource(stream)
+      source.connect(analyserRef.current)
+
+      // Start visualization
+      visualize()
     } catch (error) {
       console.error('Error starting recording:', error)
-      setError(`Error starting recording: ${error instanceof Error ? error.message : String(error)}`)
     }
   }
 
   const stopRecording = () => {
-    if (recognitionRef.current) {
-      recognitionRef.current.stop()
-    }
-
-    if (mediaRecorderRef.current) {
+    if (mediaRecorderRef.current && speechRecognitionRef.current) {
       mediaRecorderRef.current.stop()
+      speechRecognitionRef.current.stop()
+      setIsRecording(false)
+
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current)
+      }
+      if (audioContextRef.current) {
+        audioContextRef.current.close()
+      }
+    }
+  }
+
+  const visualize = () => {
+    if (!canvasRef.current || !analyserRef.current) return
+
+    const canvas = canvasRef.current
+    const canvasCtx = canvas.getContext('2d')
+    if (!canvasCtx) return
+
+    const WIDTH = canvas.width
+    const HEIGHT = canvas.height
+
+    analyserRef.current.fftSize = 2048
+    const bufferLength = analyserRef.current.frequencyBinCount
+    const dataArray = new Uint8Array(bufferLength)
+
+    canvasCtx.clearRect(0, 0, WIDTH, HEIGHT)
+
+    const draw = () => {
+      animationFrameRef.current = requestAnimationFrame(draw)
+
+      analyserRef.current!.getByteFrequencyData(dataArray)
+
+      canvasCtx.fillStyle = 'rgb(0, 0, 0)'
+      canvasCtx.fillRect(0, 0, WIDTH, HEIGHT)
+
+      const barWidth = (WIDTH / bufferLength) * 2.5
+      let barHeight
+      let x = 0
+
+      for (let i = 0; i < bufferLength; i++) {
+        barHeight = dataArray[i] / 2
+
+        canvasCtx.fillStyle = `rgb(${barHeight + 100},50,50)`
+        canvasCtx.fillRect(x, HEIGHT - barHeight / 2, barWidth, barHeight)
+
+        x += barWidth + 1
+      }
     }
 
-    setIsRecording(false)
-  }
-
-  const handleTranscriptEdit = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newTranscript = e.target.value
-    setEditableTranscript(newTranscript)
-    onTranscriptUpdate(newTranscript)
-    lastTranscriptRef.current = newTranscript
-  }
-
-  const postProcessTranscript = (text: string): string => {
-    return text
-      .replace(/\bi\b/g, 'I')
-      .replace(/(?<=\.\s|\?\s|\!\s)[a-z]/g, m => m.toUpperCase())
-      .replace(/\b(ok|okay)\b/gi, 'OK')
+    draw()
   }
 
   return (
     <div className="space-y-4">
-      <div>
+      <div className="flex items-center space-x-2">
         <button
           onClick={isRecording ? stopRecording : startRecording}
-          className={`px-4 py-2 rounded transition duration-200 ${
+          className={`px-4 py-2 rounded ${
             isRecording
-              ? 'bg-red-500 text-white hover:bg-red-600'
-              : 'bg-blue-500 text-white hover:bg-blue-600'
-          }`}
+              ? 'bg-red-500 hover:bg-red-600'
+              : 'bg-blue-500 hover:bg-blue-600'
+          } text-white transition duration-200`}
         >
-          {isRecording ? 'Stop Recording' : 'Start Recording'}
+          {isRecording ? (
+            <>
+              <Square className="w-5 h-5 inline-block mr-2" />
+              Stop Recording
+            </>
+          ) : (
+            <>
+              <Mic className="w-5 h-5 inline-block mr-2" />
+              Start Recording
+            </>
+          )}
         </button>
-        {error && <p className="text-red-500 mt-2">{error}</p>}
+        {isRecording && <div className="text-red-500 animate-pulse">Recording...</div>}
       </div>
-      <textarea
-        value={editableTranscript}
-        onChange={handleTranscriptEdit}
-        placeholder="Transcript will appear here. You can edit it to correct any mistakes."
-        rows={10}
-        className="w-full p-2 border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-      />
+      <div className="border p-4 rounded-lg bg-gray-500">
+        <h3 className="font-semibold mb-2">Transcript:</h3>
+        <p className="whitespace-pre-wrap">{transcript}</p>
+      </div>
+      <canvas ref={canvasRef} width="640" height="100" className="w-full h-24 bg-black" />
     </div>
   )
 }

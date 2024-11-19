@@ -44,8 +44,12 @@ export async function POST(req: Request) {
         statusText: response.statusText,
         error: errorData
       })
+
+      return NextResponse.json({
+        error: `OpenAI API error: ${response.statusText}`
+      }, { status: response.status })
       
-      // Return appropriate error message based on status code
+     {/* // Return appropriate error message based on status code
       if (response.status === 401) {
         return new NextResponse('Invalid API key', { status: 500 })
       } else if (response.status === 429) {
@@ -53,6 +57,7 @@ export async function POST(req: Request) {
       } else {
         return new NextResponse(`OpenAI API error: ${response.statusText}`, { status: response.status })
       }
+      */}
     }
 
     const data = await response.json()
@@ -63,8 +68,11 @@ export async function POST(req: Request) {
       return new NextResponse('Invalid response from OpenAI API', { status: 500 })
     }
 
-    const summary = data.choices[0].message.content
-    return new NextResponse(summary)
+    return NextResponse.json({
+      summary: data.choices[0].message.content
+    })
+
+   
     
   } catch (error) {
     console.error('Error in summarize API:', error)
