@@ -1,14 +1,25 @@
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
-  const { prompt } = await req.json()
-
   try {
+    // Validate incoming request
+    const { prompt } = await req.json()
+    if (!prompt) {
+      return new NextResponse('Missing prompt in request body', { status: 400 })
+    }
+
+    // Validate API key
+    const apiKey = process.env.OPENAI_API_KEY
+    if (!apiKey) {
+      console.error('OpenAI API key is not configured')
+      return new NextResponse('Server configuration error', { status: 500 })
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`
+        'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
         model: 'gpt-3.5-turbo',
@@ -26,15 +37,40 @@ export async function POST(req: Request) {
     })
 
     if (!response.ok) {
-      throw new Error('Failed to generate summary')
+      // Get the error details from the API response
+      const errorData = await response.json().catch(() => null)
+      console.error('OpenAI API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        error: errorData
+      })
+      
+      // Return appropriate error message based on status code
+      if (response.status === 401) {
+        return new NextResponse('Invalid API key', { status: 500 })
+      } else if (response.status === 429) {
+        return new NextResponse('Rate limit exceeded', { status: 429 })
+      } else {
+        return new NextResponse(`OpenAI API error: ${response.statusText}`, { status: response.status })
+      }
     }
 
     const data = await response.json()
-    const summary = data.choices[0].message.content
+    
+    // Validate response data
+    if (!data.choices?.[0]?.message?.content) {
+      console.error('Unexpected API response format:', data)
+      return new NextResponse('Invalid response from OpenAI API', { status: 500 })
+    }
 
+    const summary = data.choices[0].message.content
     return new NextResponse(summary)
+    
   } catch (error) {
     console.error('Error in summarize API:', error)
-    return new NextResponse('Error generating summary', { status: 500 })
+    return new NextResponse(
+      error instanceof Error ? error.message : 'Internal server error',
+      { status: 500 }
+    )
   }
 }

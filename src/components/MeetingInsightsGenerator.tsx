@@ -41,7 +41,7 @@ export default function MeetingInsightsGenerator() {
       })
 
       if (!summaryResponse.ok) {
-        throw new Error('Failed to generate summary')
+        throw new Error(`Failed to generate summary. API error: ${summaryResponse.statusText}`)
       }
 
       const data = await summaryResponse.json()
