@@ -1,35 +1,100 @@
-## Meeting Insights Generator
+# 🎙️ Meeting Insights Generator
+
+# Overview
+
+Meeting Insights Generator is a powerful web application that helps you transform your meeting recordings into actionable insights. Leveraging advanced speech recognition and AI-powered summarization, this tool allows you to record, transcribe, and analyze your meetings with ease.
+
+
+
+#🌟 Features
+
+##🎤 Audio Recording
+
+Real-time audio recording
+Live audio visualization
+Download original audio recording
+
+## 📝 Transcription
+
+Continuous speech-to-text conversion
+Web Speech Recognition API integration
+Real-time transcript display
+## 📄 Instant PDF Transcript Export
+
+Download full meeting transcript as a PDF
+Preserve meeting text for future reference
+Easy sharing and archiving
+
+
+
+## 💡 AI-Powered Insights
+
+Generate concise meeting summaries
+Identify key points and action items
+Powered by OpenAI's GPT-3.5 Turbo
+
+## 📊 Export Options
+
+Generate PDF reports with summary and insights
+Export full meeting transcript as PDF
+
+
 ## Getting Started
 
-First, run the development server:
+First Clone the repository and run npm install, run the development server:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
+Set up environment variables
+Create a .env.local file in the project root:
 
+```bash 
+OPENAI_API_KEY=your_openai_api_key_here
+
+
+```
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📄 PDF Transcript Export Feature
+How It Works
 
-## Learn More
+* Record your meeting using the audio recorder
+* View the live transcription in real-time
+* Click "Download Transcript as PDF" button
+* Automatically generate a clean, formatted PDF
 
-To learn more about Next.js, take a look at the following resources:
+## PDF Export Benefits
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+* Preserves exact meeting transcript
+* Professional, readable formatting
+* Easy to store and share
+* No manual copy-pasting required
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Transcript PDF Details
 
-## Deploy on Vercel
+* Includes full meeting text
+* Timestamp options (optional)
+* Clean, minimalist design
+* Optimized for printing and digital storage
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🛠️ Tech Stack
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+* Frontend: React, Next.js
+* PDF Generation: Custom PDF utility
+* Audio Processing: Web Audio API
+* Speech Recognition: Web Speech Recognition API
+* Visualization: HTML5 Canvas
+* AI Integration: OpenAI API
+* Icons: Lucide React
+
+
+
+## 📋 Usage Guide
+
+* Click "Start Recording" to begin
+* Speak naturally during your meeting
+* Watch real-time transcript generation
+* Click "Download Transcript as PDF" to export
+* Optional: Generate AI-powered summary
