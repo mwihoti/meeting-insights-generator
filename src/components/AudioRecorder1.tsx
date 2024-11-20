@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Mic, Square } from 'lucide-react'
-import * as tf from '@tensorflow/tfjs'
-import * as speechCommands from '@tensorflow-models/speech-commands'
+
 
 interface AudioRecorderProps {
     onTranscriptUpdate: (transcript: string) => void
@@ -179,7 +178,7 @@ export function AudioRecorder({ onTranscriptUpdate, onRecordingComplete}: AudioR
                 </button>
                 {isRecording && <div className="text-red-500 animate-pulse">Recording...</div>}
             </div>
-            <div className='border p-4 rounded-lg bg-gray-50'>
+            <div className='border p-4 rounded-lg bg-gray-500'>
                 <h3 className='font-semibold mb-2'>Transcript:</h3>
                 <p className='whitespace-pre-wrap'>{transcript}</p>
             </div>

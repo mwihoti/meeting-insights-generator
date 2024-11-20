@@ -2,8 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { Mic, Square } from 'lucide-react'
-import * as tf from '@tensorflow/tfjs'
-import * as speechCommands from '@tensorflow-models/speech-commands'
+
+declare global {
+  interface Window {
+    SpeechRecognition: new () => SpeechRecognition;
+    webkitSpeechRecognition: new () => SpeechRecognition;
+  }
+}
+
+type SpeechRecognition = typeof window.SpeechRecognition;
 
 interface AudioRecorderProps {
   onTranscriptUpdate: (transcript: string) => void

@@ -6,9 +6,9 @@ Meeting Insights Generator is a powerful web application that helps you transfor
 
 
 
-#🌟 Features
+# 🌟 Features
 
-##🎤 Audio Recording
+## 🎤 Audio Recording
 
 Real-time audio recording
 Live audio visualization

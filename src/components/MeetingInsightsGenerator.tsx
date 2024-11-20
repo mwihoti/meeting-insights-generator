@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { AlertCircle } from 'lucide-react'
-import { AudioRecorder } from './AudioRecorder'
+import { AudioRecorder } from './AudioRecorder1'
 import * as tf from '@tensorflow/tfjs'
 import * as use from '@tensorflow-models/universal-sentence-encoder'
 
@@ -13,6 +13,7 @@ interface Insights {
 
 export default function MeetingInsightsGenerator() {
   const [transcript, setTranscript] = useState('')
+  const [summary, setSummary] = useState('')
   const [insights, setInsights] = useState<Insights | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
@@ -58,23 +59,20 @@ export default function MeetingInsightsGenerator() {
       setIsGeneratingInsights(true)
 
       // Text summarization using TensorFlow.js
-      const sentences = transcript.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0)
-      const embeddings = await model.embed(sentences)
-      const sentenceImportance = tf.tidy(() => {
-        const sentenceMean = embeddings.mean(0)
-        const cosineSimilarities = embeddings.dot(sentenceMean).div(
-          embeddings.norm('euclidean', 1, true).mul(sentenceMean.norm('euclidean'))
-        )
-        return cosineSimilarities.arraySync() as number[]
+      const summaryResponse = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ prompt: transcript }),
       })
 
-      const topSentences = sentences
-        .map((sentence, index) => ({ sentence, importance: sentenceImportance[index] }))
-        .sort((a, b) => b.importance - a.importance)
-        .slice(0, 3)
-        .map(item => item.sentence)
+      if (!summaryResponse.ok) {
+        throw new Error('Failed to generate summary')
+      }
 
-      const summary = topSentences.join(' ')
+      const summarizedText = await summaryResponse.text()
+      setSummary(summarizedText)
 
       // Audio analysis
       const audioFeatures = await analyzeAudio()
