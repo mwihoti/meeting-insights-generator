@@ -4,6 +4,8 @@
 
 Meeting Insights Generator is a powerful web application that helps you transform your meeting recordings into actionable insights. Leveraging advanced speech recognition and AI-powered summarization, this tool allows you to record, transcribe, and analyze your meetings with ease.
 
+<img src="./public/meetingInsightdemo.png" alt="meeting insight demo">
+Live Link: [https://meeting-insights-generator.vercel.app]
 
 
 # 🌟 Features
@@ -43,10 +45,17 @@ Export full meeting transcript as PDF
 
 First Clone the repository and run npm install, run the development server:
 
-```bash
-npm run dev
-```
-Set up environment variables
+1. **Clone the Repository**:
+
+   ```bash
+   git clone https://github.com/mwihoti/meeting-insights-generator
+   cd meeting-insights-generator
+   ```
+2. **Install Dependencies**:
+    ```bash
+    npm install
+    ```
+3. **Set up environment variables**:
 Create a .env.local file in the project root:
 
 ```bash 
@@ -54,6 +63,11 @@ OPENAI_API_KEY=your_openai_api_key_here
 
 
 ```
+4  **Run the application**
+    ```bash
+    npm run dev
+    ```
+
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
 
@@ -97,4 +111,5 @@ How It Works
 * Speak naturally during your meeting
 * Watch real-time transcript generation
 * Click "Download Transcript as PDF" to export
-* Optional: Generate AI-powered summary
+* Generate Insights: Once the recording is complete, click "Generate Insights" to process the audio and display results.
+* Download Reports: Export the transcript and insights as a PDF.
