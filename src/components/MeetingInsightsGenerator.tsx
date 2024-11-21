@@ -1,42 +1,22 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef } from 'react'
 import { AlertCircle } from 'lucide-react'
-import { AudioRecorder } from './AudioRecorder1'
-import * as tf from '@tensorflow/tfjs'
-import * as use from '@tensorflow-models/universal-sentence-encoder'
-
-interface Insights {
-  summary: string
-  audioFeatures: number[] | null
-}
+import { AudioRecorder } from './AudioRecorder'
+import { generatePDF, generateTranscriptPDF } from '@/lib/pdf-utils'
 
 export default function MeetingInsightsGenerator() {
   const [transcript, setTranscript] = useState('')
   const [summary, setSummary] = useState('')
-  const [insights, setInsights] = useState<Insights | null>(null)
+  const [images, setImages] = useState<string[]>([])
   const [error, setError] = useState<string | null>(null)
   const [audioBlob, setAudioBlob] = useState<Blob | null>(null)
   const [isGeneratingInsights, setIsGeneratingInsights] = useState(false)
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
+  const [isGeneratingTranscriptPDF, setIsGeneratingTranscriptPDF] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [model, setModel] = useState<use.UniversalSentenceEncoder | null>(null)
 
-  useEffect(() => {
-    const loadModel = async () => {
-      try {
-        await tf.ready()
-        console.log('TensorFlow.js is ready')
-        const loadedModel = await use.load()
-        setModel(loadedModel)
-        console.log('Universal Sentence Encoder model loaded')
-      } catch (error) {
-        console.error('Error loading model:', error)
-        setError('Failed to load TensorFlow.js model')
-      }
-    }
-    loadModel()
-  }, [])
-
+  
   const handleTranscriptUpdate = (newTranscript: string) => {
     setTranscript(newTranscript)
   }
@@ -49,16 +29,10 @@ export default function MeetingInsightsGenerator() {
   }
 
   const generateInsights = async () => {
-    if (!model) {
-      setError('Model not loaded yet. Please wait and try again.')
-      return
-    }
-
     try {
       setError(null)
       setIsGeneratingInsights(true)
 
-      // Text summarization using TensorFlow.js
       const summaryResponse = await fetch('/api/summarize', {
         method: 'POST',
         headers: {
@@ -71,13 +45,13 @@ export default function MeetingInsightsGenerator() {
         throw new Error('Failed to generate summary')
       }
 
-      const summarizedText = await summaryResponse.text()
-      setSummary(summarizedText)
-
-      // Audio analysis
-      const audioFeatures = await analyzeAudio()
-
-      setInsights({ summary, audioFeatures })
+      const data = await summaryResponse.json()
+      if (data.error) {
+        throw new Error(data.error)
+      }
+      setSummary(data.summary)
+      
+      setImages([])
     } catch (error) {
       console.error('Error generating insights:', error)
       setError(`Error generating insights: ${error instanceof Error ? error.message : String(error)}`)
@@ -86,34 +60,29 @@ export default function MeetingInsightsGenerator() {
     }
   }
 
-  const analyzeAudio = async (): Promise<number[] | null> => {
-    if (!audioBlob) {
-      console.warn('No audio data available')
-      return null
-    }
-
+  const handleGeneratePDF = async () => {
     try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)()
-      const audioBuffer = await audioContext.decodeAudioData(await audioBlob.arrayBuffer())
-      const channelData = audioBuffer.getChannelData(0) // Get the first channel
-
-      const audioTensor = tf.tensor1d(channelData)
-      
-      // Perform basic audio analysis (e.g., calculate mean and standard deviation)
-      const mean = tf.mean(audioTensor)
-      const std = tf.moments(audioTensor).variance.sqrt()
-
-      const result = [mean.dataSync()[0], std.dataSync()[0]]
-
-      // Clean up
-      audioTensor.dispose()
-      mean.dispose()
-      std.dispose()
-
-      return result
+      setError(null)
+      setIsGeneratingPDF(true)
+      await generatePDF(transcript, summary, images)
     } catch (error) {
-      console.error('Error analyzing audio:', error)
-      return null
+      console.error('Error generating PDF:', error)
+      setError(`Error generating PDF: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setIsGeneratingPDF(false)
+    }
+  }
+
+  const handleGenerateTranscriptPDF = async () => {
+    try {
+      setError(null)
+      setIsGeneratingTranscriptPDF(true)
+      await generateTranscriptPDF(transcript)
+    } catch (error) {
+      console.error('Error generating transcript PDF:', error)
+      setError(`Error generating transcript PDF: ${error instanceof Error ? error.message : String(error)}`)
+    } finally {
+      setIsGeneratingTranscriptPDF(false)
     }
   }
 
@@ -134,7 +103,7 @@ export default function MeetingInsightsGenerator() {
     <div className="w-full max-w-4xl mx-auto bg-white shadow-lg rounded-lg overflow-hidden">
       <div className="p-6 border-b">
         <h2 className="text-2xl font-semibold text-gray-800">Meeting Insights Generator</h2>
-        <p className="text-sm text-gray-600">Record your meeting, get insights, and analyze audio</p>
+        <p className="text-sm text-gray-600">Record your meeting, get insights, and find relevant visuals</p>
       </div>
       <div className="p-6 space-y-4">
         {error && (
@@ -162,25 +131,43 @@ export default function MeetingInsightsGenerator() {
         <div className="flex space-x-2">
           <button
             onClick={generateInsights}
-            disabled={!transcript || isGeneratingInsights || !model}
+            disabled={!transcript || isGeneratingInsights}
             className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isGeneratingInsights ? 'Generating Insights...' : 'Generate Insights'}
           </button>
+          <button
+            onClick={handleGenerateTranscriptPDF}
+            disabled={!transcript || isGeneratingTranscriptPDF}
+            className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingTranscriptPDF ? 'Generating PDF...' : 'Download Transcript as PDF'}
+          </button>
         </div>
-        {insights && (
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold">Summary</h3>
-              <p className="text-gray-700">{insights.summary}</p>
-            </div>
-            {insights.audioFeatures && (
-              <div>
-                <h3 className="text-lg font-semibold">Audio Features</h3>
-                <p className="text-gray-700">Mean: {insights.audioFeatures[0].toFixed(2)}, Standard Deviation: {insights.audioFeatures[1].toFixed(2)}</p>
-              </div>
-            )}
+        {summary && (
+          <div>
+            <h3 className="text-lg font-semibold">Summary</h3>
+            <p className="text-gray-700">{summary}</p>
           </div>
+        )}
+        {images.length > 0 && (
+          <div>
+            <h3 className="text-lg font-semibold">Relevant Visuals</h3>
+            <div className="grid grid-cols-2 gap-4">
+              {images.map((image, index) => (
+                <img key={index} src={image} alt={`Relevant visual ${index + 1}`} className="w-full h-auto rounded" />
+              ))}
+            </div>
+          </div>
+        )}
+        {(summary || images.length > 0) && (
+          <button
+            onClick={handleGeneratePDF}
+            disabled={isGeneratingPDF}
+            className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isGeneratingPDF ? 'Generating PDF...' : 'Generate Full PDF Report'}
+          </button>
         )}
       </div>
     </div>

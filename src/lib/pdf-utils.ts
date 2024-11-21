@@ -16,20 +16,25 @@ export async function generatePDF(transcript: string, summary: string, images: s
     const splitTranscript = doc.splitTextToSize(transcript, 170)
     doc.text(splitTranscript, 20, 50)
 
+    // Calculate Y position for summary after transcript
+    const transcriptHeight = splitTranscript.length * 10;
+    const summaryStartY  = 30 + transcriptHeight + 20;
+
     // Add summary
 
-    const summaryY = doc.internal.pageSize.height - doc.internal.pageSize.height + 60
+
+
+    
     doc.setFontSize(16)
-    doc.text('Summary', 20, summaryY)
+    doc.text('Summary', 20, summaryStartY)
     doc.setFontSize(12)
-    doc.text(summary, 20, summaryY + 20, {maxWidth: 170 })
-    const splitSummary = doc.splitTextToSize(transcript, 170)
-    doc.text(splitSummary, 20, summaryY + 10)
+    const splitSummary = doc.splitTextToSize(summary, 170)
+    doc.text(splitSummary, 20, summaryStartY + 10)
 
     // Add images
 
     if (images.length > 0) {
-        const imagesY = doc.internal.pageSize.height - doc.internal.pageSize.height + 30
+        const imagesY = summaryStartY + splitSummary.length * 10 + 30
         doc.setFontSize(16)
         doc.text('Relevant Visuals', 20, imagesY )
 

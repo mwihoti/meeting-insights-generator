@@ -1,16 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
 import { Mic, Square } from 'lucide-react'
-
-declare global {
-  interface Window {
-    SpeechRecognition: new () => SpeechRecognition;
-    webkitSpeechRecognition: new () => SpeechRecognition;
-  }
-}
-
-type SpeechRecognition = typeof window.SpeechRecognition;
 
 interface AudioRecorderProps {
   onTranscriptUpdate: (transcript: string) => void
@@ -21,7 +13,7 @@ export function AudioRecorder({ onTranscriptUpdate, onRecordingComplete }: Audio
   const [isRecording, setIsRecording] = useState(false)
   const [transcript, setTranscript] = useState('')
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
-  const speechRecognitionRef = useRef<SpeechRecognition | null>(null)
+  const recognitionRef = useRef<any>(null)
   const audioChunksRef = useRef<Blob[]>([])
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animationFrameRef = useRef<number | null>(null)
@@ -56,24 +48,33 @@ export function AudioRecorder({ onTranscriptUpdate, onRecordingComplete }: Audio
         onRecordingComplete(audioBlob)
       }
 
-      speechRecognitionRef.current = new (window.SpeechRecognition || window.webkitSpeechRecognition)()
-      speechRecognitionRef.current.continuous = true
-      speechRecognitionRef.current.interimResults = true
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      if (SpeechRecognition) {
+        recognitionRef.current = new SpeechRecognition()
+        recognitionRef.current.continuous = true
+        recognitionRef.current.interimResults = true
 
-      speechRecognitionRef.current.onresult = (event) => {
-        const currentTranscript = Array.from(event.results)
-          .map(result => result[0].transcript)
-          .join('')
-        setTranscript(currentTranscript)
-        onTranscriptUpdate(currentTranscript)
+        recognitionRef.current.onresult = (event: any) => {
+          let currentTranscript = ''
+          for (let i = 0; i < event.results.length; i++) {
+            const result = event.results[i]
+            currentTranscript += result[0].transcript
+          }
+          setTranscript(currentTranscript)
+          onTranscriptUpdate(currentTranscript)
+        }
+
+        recognitionRef.current.start()
+      } else {
+        console.error('SpeechRecognition is not supported in this browser')
       }
 
       mediaRecorderRef.current.start()
-      speechRecognitionRef.current.start()
       setIsRecording(true)
 
       // Set up audio analysis
-      audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)()
+      const AudioContext = (window as any).AudioContext || (window as any).webkitAudioContext
+      audioContextRef.current = new AudioContext()
       analyserRef.current = audioContextRef.current.createAnalyser()
       const source = audioContextRef.current.createMediaStreamSource(stream)
       source.connect(analyserRef.current)
@@ -86,17 +87,19 @@ export function AudioRecorder({ onTranscriptUpdate, onRecordingComplete }: Audio
   }
 
   const stopRecording = () => {
-    if (mediaRecorderRef.current && speechRecognitionRef.current) {
+    if (mediaRecorderRef.current) {
       mediaRecorderRef.current.stop()
-      speechRecognitionRef.current.stop()
-      setIsRecording(false)
+    }
+    if (recognitionRef.current) {
+      recognitionRef.current.stop()
+    }
+    setIsRecording(false)
 
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current)
-      }
-      if (audioContextRef.current) {
-        audioContextRef.current.close()
-      }
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current)
+    }
+    if (audioContextRef.current) {
+      audioContextRef.current.close()
     }
   }
 
@@ -166,7 +169,7 @@ export function AudioRecorder({ onTranscriptUpdate, onRecordingComplete }: Audio
         </button>
         {isRecording && <div className="text-red-500 animate-pulse">Recording...</div>}
       </div>
-      <div className="border p-4 rounded-lg bg-gray-500">
+      <div className="border p-4 rounded-lg bg-gray-50">
         <h3 className="font-semibold mb-2">Transcript:</h3>
         <p className="whitespace-pre-wrap">{transcript}</p>
       </div>

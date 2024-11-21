@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         messages: [
           {
             role: 'system',
-            content: 'You are a helpful assistant that summarizes meeting transcripts. Provide a concise summary with key points and action items.'
+            content: 'You are a helpful assistant that summarizes meeting transcripts. Provide a concise summary with key points and action items. List major points'
           },
           {
             role: 'user',

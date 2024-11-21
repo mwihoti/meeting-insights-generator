@@ -19,6 +19,6 @@ export async function GET(request: Request) {
     )
 
     const data = await response.json()
-    const images = data.results.map((result: any) => result.url.small)
-    return NextResponse.json({ images })
+    
+    return NextResponse.json(data)
 }
